@@ -52,13 +52,14 @@ pipeline {
         stage('SonarCloud Analysis') {
             steps {
                 echo 'Running SonarCloud analysis...'
-                withSonarQubeEnv(SONARQUBE_SERVER) {
+                withCredentials([string(credentialsId: 'SONAR_TOKEN', variable: 'SONAR_TOKEN')]) {
                     bat """
                         mvn sonar:sonar ^
                         -Dsonar.projectKey=%SONAR_PROJECT_KEY% ^
                         -Dsonar.organization=%SONAR_ORGANIZATION% ^
                         -Dsonar.projectName=%SONAR_PROJECT_NAME% ^
-                        -Dsonar.host.url=https://sonarcloud.io
+                        -Dsonar.host.url=https://sonarcloud.io ^
+                        -Dsonar.login=%SONAR_TOKEN%
                     """
                 }
             }
@@ -96,7 +97,7 @@ pipeline {
             steps {
                 echo "Logging into Docker registry and pushing image..."
                 withCredentials([usernamePassword(
-                    credentialsId: "%DOCKERHUB_CREDENTIALS%",
+                    credentialsId: DOCKERHUB_CREDENTIALS,
                     usernameVariable: 'DOCKERHUB_USERNAME',
                     passwordVariable: 'DOCKERHUB_PASSWORD'
                 )]) {
@@ -109,6 +110,17 @@ pipeline {
                 }
             }
         }
+
+        stage('Run Docker Container') {
+            steps {
+                echo "Running Docker container..."
+                bat """
+                    docker stop %CONTAINER_NAME% || true
+                    docker rm %CONTAINER_NAME% || true
+                    docker run -d --name %CONTAINER_NAME% -p %HOST_PORT_MAPPING% %DOCKER_IMAGE%:latest
+                """
+            }
+        }
     }
 
     post {
@@ -117,7 +129,7 @@ pipeline {
             cleanWs()
         }
         success {
-            echo 'Build, tests, SonarCloud analysis, and Docker push were successful!'
+            echo 'Build, tests, SonarCloud analysis, Docker push, and container run were successful!'
         }
         failure {
             echo 'Pipeline failed! Check logs for details.'
