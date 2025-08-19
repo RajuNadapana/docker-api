@@ -2,14 +2,14 @@ pipeline {
     agent any
 
     tools {
-        jdk 'JDK-21'          // Your Jenkins JDK installation
-        maven 'Maven-3.8.4'   // Your Jenkins Maven installation
+        jdk 'JDK-21'          // Jenkins JDK installation
+        maven 'Maven-3.8.4'   // Jenkins Maven installation
     }
 
     environment {
         // SonarCloud configuration
         SONARQUBE_SERVER   = 'Sonar Cloud'                     // Jenkins SonarCloud server name
-        SONAR_PROJECT_KEY  = 'RajuNadapana_simple-emp-api'    // Your SonarCloud project key
+        SONAR_PROJECT_KEY  = 'RajuNadapana_simple-emp-api'    // SonarCloud project key
         SONAR_PROJECT_NAME = 'simple-emp-api'                 // Project name
         SONAR_ORGANIZATION = 'rajunadapana'                   // Organization key (lowercase)
 
@@ -53,14 +53,16 @@ pipeline {
             steps {
                 echo 'Running SonarCloud analysis...'
                 withCredentials([string(credentialsId: 'SONAR_TOKEN', variable: 'SONAR_TOKEN')]) {
-                    bat """
-                        mvn sonar:sonar ^
-                        -Dsonar.projectKey=%SONAR_PROJECT_KEY% ^
-                        -Dsonar.organization=%SONAR_ORGANIZATION% ^
-                        -Dsonar.projectName=%SONAR_PROJECT_NAME% ^
-                        -Dsonar.host.url=https://sonarcloud.io ^
-                        -Dsonar.login=%SONAR_TOKEN%
-                    """
+                    withSonarQubeEnv('Sonar Cloud') {
+                        bat """
+                            mvn sonar:sonar ^
+                            -Dsonar.projectKey=RajuNadapana_simple-emp-api ^
+                            -Dsonar.organization=rajunadapana ^
+                            -Dsonar.projectName=simple-emp-api ^
+                            -Dsonar.host.url=https://sonarcloud.io ^
+                            -Dsonar.login=%SONAR_TOKEN%
+                        """
+                    }
                 }
             }
             post {
@@ -72,8 +74,8 @@ pipeline {
 
         stage('Quality Gate Check') {
             steps {
-                echo 'Waiting 10 seconds to ensure SonarCloud processed the report...'
-                sleep(time: 10, unit: 'SECONDS')
+                echo 'Waiting 15 seconds to ensure SonarCloud processed the report...'
+                sleep(time: 15, unit: 'SECONDS')
                 timeout(time: 10, unit: 'MINUTES') {
                     echo 'Checking SonarCloud Quality Gate...'
                     waitForQualityGate abortPipeline: true
@@ -125,7 +127,7 @@ pipeline {
 
     post {
         always {
-            echo 'Pipeline completed with status: %BUILD_STATUS%'
+            echo 'Pipeline completed.'
             cleanWs()
         }
         success {
