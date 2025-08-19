@@ -8,7 +8,7 @@ pipeline {
 
     environment {
         SONARQUBE_SERVER   = 'Sonar Cloud'
-        SONAR_PROJECT_KEY  = 'docker-api'           // <-- docker-api project
+        SONAR_PROJECT_KEY  = 'docker-api'
         SONAR_PROJECT_NAME = 'docker-api'
         SONAR_ORGANIZATION = 'rajunadapana'
 
@@ -63,11 +63,6 @@ pipeline {
                     }
                 }
             }
-            post {
-                always {
-                    echo 'SonarCloud analysis completed.'
-                }
-            }
         }
 
         stage('Quality Gate Check') {
@@ -83,9 +78,7 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                script {
-                    env.IMAGE_TAG = "${env.BUILD_NUMBER}"
-                }
+                script { env.IMAGE_TAG = "${env.BUILD_NUMBER}" }
                 bat """
                     echo Building Docker image: %DOCKER_IMAGE%:%IMAGE_TAG%
                     docker build --pull -t %DOCKER_IMAGE%:%IMAGE_TAG% -t %DOCKER_IMAGE%:latest .
@@ -101,12 +94,12 @@ pipeline {
                     usernameVariable: 'DOCKERHUB_USERNAME',
                     passwordVariable: 'DOCKERHUB_PASSWORD'
                 )]) {
-                    bat '''
+                    bat """
                         echo %DOCKERHUB_PASSWORD% | docker login -u %DOCKERHUB_USERNAME% --password-stdin
                         docker push %DOCKER_IMAGE%:%IMAGE_TAG%
                         docker push %DOCKER_IMAGE%:latest
                         docker logout || true
-                    '''
+                    """
                 }
             }
         }
