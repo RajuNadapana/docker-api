@@ -2,23 +2,21 @@ pipeline {
     agent any
 
     tools {
-        jdk 'JDK-21'          // Jenkins JDK installation
-        maven 'Maven-3.8.4'   // Jenkins Maven installation
+        jdk 'JDK-21'
+        maven 'Maven-3.8.4'
     }
 
     environment {
-        // SonarCloud configuration
-        SONARQUBE_SERVER   = 'Sonar Cloud'                     // Jenkins SonarCloud server name
-        SONAR_PROJECT_KEY  = 'RajuNadapana_simple-emp-api'    // SonarCloud project key
-        SONAR_PROJECT_NAME = 'simple-emp-api'                 // Project name
-        SONAR_ORGANIZATION = 'rajunadapana'                   // Organization key (lowercase)
+        SONARQUBE_SERVER   = 'Sonar Cloud'
+        SONAR_PROJECT_KEY  = 'docker-api'           // <-- docker-api project
+        SONAR_PROJECT_NAME = 'docker-api'
+        SONAR_ORGANIZATION = 'rajunadapana'
 
-        // Docker / Deployment
-        APP_NAME              = 'simple-emp-api'
-        DOCKER_IMAGE          = "rajunadapana/${APP_NAME}"    
-        CONTAINER_NAME        = 'simple-emp-api'
-        APP_PORT              = '9595'                          
-        DOCKERHUB_CREDENTIALS = 'docker-credentials'          // Jenkins DockerHub credentials ID
+        APP_NAME              = 'docker-api'
+        DOCKER_IMAGE          = "rajunadapana/${APP_NAME}"
+        CONTAINER_NAME        = 'docker-api'
+        APP_PORT              = '9595'
+        DOCKERHUB_CREDENTIALS = 'docker-credentials'
         HOST_PORT_MAPPING     = '9595:9595'
     }
 
@@ -26,7 +24,7 @@ pipeline {
         stage('Checkout') {
             steps {
                 echo 'Cloning repository...'
-                git branch: 'main', url: 'https://github.com/RajuNadapana/simple-emp-api.git'
+                git branch: 'main', url: 'https://github.com/RajuNadapana/docker-api.git'
             }
         }
 
@@ -52,13 +50,13 @@ pipeline {
         stage('SonarCloud Analysis') {
             steps {
                 echo 'Running SonarCloud analysis...'
-                withCredentials([string(credentialsId: 'SONAR_TOKEN', variable: 'SONAR_TOKEN')]) {
-                    withSonarQubeEnv('Sonar Cloud') {
+                withSonarQubeEnv('Sonar Cloud') {
+                    withCredentials([string(credentialsId: 'SONAR_TOKEN', variable: 'SONAR_TOKEN')]) {
                         bat """
                             mvn sonar:sonar ^
-                            -Dsonar.projectKey=RajuNadapana_simple-emp-api ^
-                            -Dsonar.organization=rajunadapana ^
-                            -Dsonar.projectName=simple-emp-api ^
+                            -Dsonar.projectKey=%SONAR_PROJECT_KEY% ^
+                            -Dsonar.organization=%SONAR_ORGANIZATION% ^
+                            -Dsonar.projectName=%SONAR_PROJECT_NAME% ^
                             -Dsonar.host.url=https://sonarcloud.io ^
                             -Dsonar.login=%SONAR_TOKEN%
                         """
@@ -74,8 +72,8 @@ pipeline {
 
         stage('Quality Gate Check') {
             steps {
-                echo 'Waiting 15 seconds to ensure SonarCloud processed the report...'
-                sleep(time: 15, unit: 'SECONDS')
+                echo 'Waiting 30 seconds to ensure SonarCloud processed the report...'
+                sleep(time: 30, unit: 'SECONDS')
                 timeout(time: 10, unit: 'MINUTES') {
                     echo 'Checking SonarCloud Quality Gate...'
                     waitForQualityGate abortPipeline: true
@@ -127,7 +125,7 @@ pipeline {
 
     post {
         always {
-            echo 'Pipeline completed.'
+            echo 'Pipeline completed with status: %BUILD_STATUS%'
             cleanWs()
         }
         success {
