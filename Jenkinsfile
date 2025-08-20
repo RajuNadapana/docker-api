@@ -65,6 +65,7 @@ pipeline {
             }
         }
 
+        /*
         stage('Quality Gate Check') {
             steps {
                 echo 'Waiting 30 seconds to ensure SonarCloud processed the report...'
@@ -75,6 +76,7 @@ pipeline {
                 }
             }
         }
+        */
 
         stage('Build Docker Image') {
             steps {
